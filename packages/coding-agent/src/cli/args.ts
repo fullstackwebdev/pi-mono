@@ -278,6 +278,10 @@ ${chalk.bold("Examples:")}
   ${APP_NAME} --export ~/${CONFIG_DIR_NAME}/agent/sessions/--path--/session.jsonl
   ${APP_NAME} --export session.jsonl output.html
 
+  # Shebang script mode (auto-detects script file)
+  #!/path/to/pi -p
+  # List all .ts files
+
 ${chalk.bold("Environment Variables:")}
   ANTHROPIC_API_KEY                - Anthropic Claude API key
   ANTHROPIC_OAUTH_TOKEN            - Anthropic OAuth token (alternative to API key)

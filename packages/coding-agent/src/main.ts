@@ -55,6 +55,25 @@ async function readPipedStdin(): Promise<string | undefined> {
 	});
 }
 
+/**
+ * Read script content from a file (for shebang scripts).
+ * Skips the shebang line if present.
+ */
+async function readScriptFile(scriptPath: string): Promise<string | undefined> {
+	const fs = await import("fs/promises");
+	try {
+		const content = await fs.readFile(scriptPath, "utf-8");
+		// Skip shebang line if present
+		const lines = content.split("\n");
+		if (lines[0]?.startsWith("#!")) {
+			lines.shift();
+		}
+		return lines.join("\n").trim() || undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 function reportSettingsErrors(settingsManager: SettingsManager, context: string): void {
 	const errors = settingsManager.drainErrors();
 	for (const { scope, error } of errors) {
@@ -713,10 +732,27 @@ export async function main(args: string[]) {
 	// Read piped stdin content (if any) - skip for RPC mode which uses stdin for JSON-RPC
 	let stdinContent: string | undefined;
 	if (parsed.mode !== "rpc") {
+		// Read from piped stdin
 		stdinContent = await readPipedStdin();
 		if (stdinContent !== undefined) {
 			// Force print mode since interactive mode requires a TTY for keyboard input
 			parsed.print = true;
+		} else if (parsed.print && parsed.messages.length === 0) {
+			// No stdin piped, no message args, but -p flag set
+			// Check if $0 is a script file (shebang execution)
+			const fs = await import("fs/promises");
+			try {
+				const stat = await fs.stat(process.argv[1]);
+				if (stat.isFile()) {
+					// Check if file starts with shebang for pi
+					const content = await fs.readFile(process.argv[1], "utf-8");
+					if (content.startsWith("#!") && content.includes("pi")) {
+						stdinContent = await readScriptFile(process.argv[1]);
+					}
+				}
+			} catch {
+				// $0 not accessible, ignore
+			}
 		}
 	}
 
